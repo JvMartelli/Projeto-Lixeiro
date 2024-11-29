@@ -1,3 +1,6 @@
+## Integrantes: João Vitor Martelli, Eduardo Ranzan, Marcelo Savitisk
+
+
 # Documentação do Projeto IoT: Gerenciador de Lixeira Inteligente
 ### Este projeto implementa um sistema IoT para gerenciar a ocupação de uma lixeira com feedback visual (LEDs) e comunicação com a API ThingSpeak.
 
