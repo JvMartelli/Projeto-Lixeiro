@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8">
+    <title>Gerenciador IoT</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename="css/bootstrap.min.css")}}">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f9f9f9;
+            color: #333;
+        }
+
+        h1 {
+            font-size: 24px;
+            color: #444;
+            margin-bottom: 20px;
+        }
+
+        .filter-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            background-color: #fff;
+            padding: 10px 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .filter-container label {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .filter-container input {
+            padding: 8px 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .filter-container button {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            background-color: #007bff;
+            color: #fff;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .filter-container button:hover {
+            background-color: #0056b3;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #fff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        thead {
+            background-color: #f1f1f1;
+            text-align: left;
+        }
+
+        thead th {
+            padding: 12px 15px;
+            font-size: 14px;
+            color: #666;
+            border-bottom: 1px solid #ddd;
+        }
+
+        tbody tr {
+            border-bottom: 1px solid #f1f1f1;
+        }
+
+        tbody tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        tbody tr:hover {
+            background-color: #f1f1f1;
+            transition: background-color 0.3s ease;
+        }
+
+        tbody td {
+            padding: 12px 15px;
+            font-size: 14px;
+            color: #333;
+        }
+
+        .search-container {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: flex-start;
+            gap: 10px;
+        }
+
+        .search-container input {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            width: 100%;
+            max-width: 300px;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="col-md-12 fundo" align="center">
+        <div class="d-flex justify-content-center">
+            <h1>Lixeiro da Sala de Reuniões!</h1>
+        </div>
+        <p>Sala de Reuniões</p>
+    </div>
+    <div class="w-100 p-3">
+        <h2>Controles</h2>
+        <a class="btn" href="/lixeira/fechar" role="button">Fechar lixeira</a>
+        <a class="btn btn-primary" href="/lixeira/abrir" role="button">Abrir lixeira</a>
+
+        <h2>Status da Lixeira</h2>
+        <p>Ocupação</p>
+        <div class="progress">
+            <div id="progress-bar" class="progress-bar" role="progressbar" aria-valuemax="1848" style {{ ocupacaoWidth }}>{{ ocupacaoo }}%</div>
+        </div>
+
+        <div>
+            <div class="filter-container">
+                <label for="start-date">Data Inicial:</label>
+                <input type="datetime-local" id="start-date">
+                <label for="end-date">Data Final:</label>
+                <input type="datetime-local" id="end-date">
+                <button onclick="applyFilter()">Filtrar</button>
+                <button onclick="resetTable()">Resetar</button>
+            </div>
+
+            <table id="data-table">
+            <thead>
+            <tr>
+                <th>Data de Criação</th>
+                <th>Status da Tampa</th>
+            </tr>
+            </thead>
+            <tbody>
+                
+            </tbody>
+            </table>
+        </div>
+    </div>
+
+
+
+    <script>
+        const apiUrl = "https://api.thingspeak.com/channels/2768244/feeds.json?results=40";
+        let originalData = []
+
+        async function fetchData() {
+            try {
+                const response = await fetch(apiUrl);
+                const data = await response.json();
+                return data.feeds || [];
+            } catch (error) {
+                console.error("Erro ao buscar os dados:", error);
+                return [];
+            }
+        }
+
+        function populateTable(feeds) {
+            const tableBody = document.querySelector("#data-table tbody");
+            tableBody.innerHTML = "";
+
+            feeds.forEach(feed => {
+            
+                if (feed.field2) {
+                    const row = document.createElement("tr");
+                    row.innerHTML = `
+                        <td>${feed.created_at}</td>
+                        <td>${feed.field2}</td>
+                    `;
+                    tableBody.appendChild(row);
+                }
+            });
+        }
+
+        function applyFilter() {
+            const startDate = document.getElementById("start-date").value;
+            const endDate = document.getElementById("end-date").value;
+
+            const filteredFeeds = originalData.filter(feed => {
+                const createdAt = new Date(feed.created_at);
+                const start = startDate ? new Date(startDate) : null;
+                const end = endDate ? new Date(endDate) : null;
+
+                return (!start || createdAt >= start) && (!end || createdAt <= end) && feed.field2;
+            });
+
+            populateTable(filteredFeeds);
+        }
+
+        function resetTable() {
+            document.getElementById("start-date").value = "";
+            document.getElementById("end-date").value = "";  
+            populateTable(originalData);
+        }
+
+    
+        fetchData().then(data => {
+            originalData = data;
+            populateTable(originalData);
+        });
+    </script>
+	
+</body>
+</html>
